@@ -1,0 +1,32 @@
+.debug {
+    color: green;
+}
+
+.info {
+    color: blue;
+}
+
+.warning {
+    color: yellow;
+}
+
+.error {
+    color: red;
+}
+
+.fatal {
+    color: red;
+    
+}
+
+Footer{
+    color: red;
+}
+
+Footer .key {
+    color: #f8f8f2;
+}
+
+Footer .key:hover {
+    color: #ffffff;
+}

@@ -1,0 +1,17 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "run tui",
+        "type": "shell",
+        "command": "textual run --dev src/terminlog/terminlog/view_tui.py",
+        "problemMatcher": []
+      },
+      {
+        "label": "run tui console",
+        "type": "shell",
+        "command": "textual console",
+        "problemMatcher": []
+      }
+    ]
+  }
