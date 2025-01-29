@@ -2,9 +2,9 @@ from textual.app import App, ComposeResult, SystemCommand
 from textual.widgets import Static, Footer, Button, SelectionList, OptionList, Input
 from textual.containers import VerticalScroll, HorizontalGroup, Horizontal, Container
 from textual.command import Provider, Hit, Hits, SimpleProvider, SimpleCommand
-from typing import NamedTuple
+
 from textual.message import Message
-from enum import IntEnum
+
 from collections import deque
 from textual.binding import Binding
 from textual.screen import Screen, ModalScreen
@@ -17,23 +17,10 @@ from textual import on
 from textual.css.query import  NoMatches
 from textual._color_constants import COLOR_NAME_TO_RGB
 from rapidfuzz import fuzz
-
-class LogLevel(IntEnum):
-    DEBUG = 10
-    INFO = 20
-    WARN = 30
-    ERROR = 40
-    FATAL = 50
-
-
-class LogItem(NamedTuple):
-    time: str
-    message: str
-    level: int
-    name: str
-
+from terminlog import LogItem, LogLevel
 
 class LogMessage(Message):
+    """message use to notify between working thread and main thread"""
     def __init__(self, log_item: LogItem):
         super().__init__()
         self.message = log_item
@@ -119,9 +106,9 @@ class ViewTUI(App):
     
     
     
-    def __init__(self, nodes_name):
+    def __init__(self, nodes_name, queue_size=10):
         super().__init__()
-        self.storage = deque(maxlen=10)
+        self.storage = deque(maxlen=queue_size)
         self.filter_levels = [LogLevel.DEBUG, LogLevel.INFO, LogLevel.WARN, LogLevel.ERROR]
         self.nodes_names = nodes_name
         self.active_filter_node_names = [name for name in self.nodes_names]
@@ -143,24 +130,19 @@ class ViewTUI(App):
         self.storage.clear()
         self.update_log()
         
-    def action_free_filter(self):
-        self.push_screen(InputModal(), self.free_filter_callback)
+    #region fuzzy filter
+    
 
     def free_filter_callback(self, result):
         self.notify(f"fuzzy filter: {result}")
         self.fuzzy_filter = result
         self.update_log()
+    #endregion fuzzy filter
 
-    def action_reset_filter(self):
-        """reset all filters"""
-        self.filter_levels = [LogLevel.DEBUG, LogLevel.INFO, LogLevel.WARN, LogLevel.ERROR]
-        self.active_filter_node_names = [name for name in self.nodes_names]
-        self.fuzzy_filter = ""
-        self.update_log()
+    
 
     #region filter by node name
-    def action_open_filter(self):
-        self.push_screen(FilterModal(self.nodes_names, self.active_filter_node_names), self.filter_modal_callback)
+    
 
     def filter_modal_callback(self, result) -> None:
         """filter by name callback from module
@@ -231,7 +213,14 @@ class ViewTUI(App):
         log_container.remove_children()
         self.render_logs(self.storage)
 
-    def render_logs(self, logs):
+    def render_logs(self, logs) -> None:
+        """render log if all filter ok
+
+        Args:
+            logs (_type_): log item
+
+        
+        """
         log_container = self.query_one("#log_container")
         def level_ok():
             return log_item.level in self.filter_levels
@@ -272,8 +261,6 @@ class ViewTUI(App):
         if level in self.filter_levels and name in self.active_filter_node_names:
             self.post_message(LogMessage(log_item))
 
-    
-
 
     #region filter by log level
     def level_filter(self, level):
@@ -292,6 +279,20 @@ class ViewTUI(App):
             self.filter_levels.append(level)
         self.notify(desc)
         self.update_log()
+    #endregion filter by log level
+
+    # region actions
+    def action_open_filter(self):
+        self.push_screen(FilterModal(self.nodes_names, self.active_filter_node_names), self.filter_modal_callback)
+    def action_free_filter(self):
+        self.push_screen(InputModal(), self.free_filter_callback)
+        
+    def action_reset_filter(self):
+        """reset all filters"""
+        self.filter_levels = [LogLevel.DEBUG, LogLevel.INFO, LogLevel.WARN, LogLevel.ERROR]
+        self.active_filter_node_names = [name for name in self.nodes_names]
+        self.fuzzy_filter = ""
+        self.update_log()
 
     def action_debug(self):
         self.level_filter(LogLevel.DEBUG)
@@ -304,8 +305,8 @@ class ViewTUI(App):
 
     def action_error(self):
         self.level_filter(LogLevel.ERROR)
-        
-    #endregion filter by log level
+    # endregion actions
+    
 
     def on_key(self, event):
         # if event.key == "i":
