@@ -16,7 +16,7 @@ from textual import events
 from textual import on
 from textual.css.query import  NoMatches
 from textual._color_constants import COLOR_NAME_TO_RGB
-from pathlib import Path
+from rapidfuzz import fuzz
 
 class LogLevel(IntEnum):
     DEBUG = 10
@@ -38,6 +38,30 @@ class LogMessage(Message):
         super().__init__()
         self.message = log_item
 
+# region free text search filter modal window
+class InputModal(ModalScreen[str]):
+    DEFAULT_CSS = """
+    InputModal {
+        align: center middle;
+    }
+
+    InputModal > Container {
+        width: auto;
+        height: auto;
+    }
+
+    InputModal > Container > Input {
+        width: 32;
+    }
+    """
+
+    def compose(self) -> ComposeResult:
+        with Container():
+            yield Input()
+
+    def on_input_submitted(self) -> None:
+        self.dismiss(self.query_one(Input).value)
+# endregion
 
 # region node name filter modal window
 class FilterModal(ModalScreen):
@@ -87,7 +111,9 @@ class ViewTUI(App):
         ("i", "info", "info"),
         ("w", "warning", "warning"),
         ("e", "error", "error"),
-        Binding(key="f", action="open_filter", description="filter"),
+        Binding(key="f", action="open_filter", description="filter by node name"),
+        Binding(key="r", action="reset_filter", description="reset all filter"),
+        Binding(key="z", action="free_filter", description="fuzzy filter"),
     ]
 
     
@@ -98,8 +124,8 @@ class ViewTUI(App):
         self.storage = deque(maxlen=10)
         self.filter_levels = [LogLevel.DEBUG, LogLevel.INFO, LogLevel.WARN, LogLevel.ERROR]
         self.nodes_names = nodes_name
-        self.active_filter_names = [name for name in self.nodes_names]
-
+        self.active_filter_node_names = [name for name in self.nodes_names]
+        self.fuzzy_filter = ""
         self.updating = True
         
     #region palette command region
@@ -117,10 +143,24 @@ class ViewTUI(App):
         self.storage.clear()
         self.update_log()
         
+    def action_free_filter(self):
+        self.push_screen(InputModal(), self.free_filter_callback)
+
+    def free_filter_callback(self, result):
+        self.notify(f"fuzzy filter: {result}")
+        self.fuzzy_filter = result
+        self.update_log()
+
+    def action_reset_filter(self):
+        """reset all filters"""
+        self.filter_levels = [LogLevel.DEBUG, LogLevel.INFO, LogLevel.WARN, LogLevel.ERROR]
+        self.active_filter_node_names = [name for name in self.nodes_names]
+        self.fuzzy_filter = ""
+        self.update_log()
 
     #region filter by node name
     def action_open_filter(self):
-        self.push_screen(FilterModal(self.nodes_names, self.active_filter_names), self.filter_modal_callback)
+        self.push_screen(FilterModal(self.nodes_names, self.active_filter_node_names), self.filter_modal_callback)
 
     def filter_modal_callback(self, result) -> None:
         """filter by name callback from module
@@ -130,7 +170,7 @@ class ViewTUI(App):
             result (_type_): _description_
         """
         self.notify("filter by name")
-        self.active_filter_names = result
+        self.active_filter_node_names = result
         self.update_log()
 
     #endregion
@@ -166,9 +206,8 @@ class ViewTUI(App):
             event (LogMessage): _description_
         """
         try:
-            log_container = self.query_one("#log_container")
-            log_container.mount(self.build_log_message(event.message))
-            log_container.scroll_end()
+            self.render_logs([event.message])
+            
         except NoMatches:
             pass
         
@@ -190,9 +229,25 @@ class ViewTUI(App):
         """
         log_container = self.query_one("#log_container")
         log_container.remove_children()
+        self.render_logs(self.storage)
 
-        for log_item in self.storage:
-            if log_item.level in self.filter_levels and log_item.name in self.active_filter_names:
+    def render_logs(self, logs):
+        log_container = self.query_one("#log_container")
+        def level_ok():
+            return log_item.level in self.filter_levels
+        
+        def node_name_ok():
+            return log_item.name in self.active_filter_node_names
+        
+        def fuzzy_ok():
+            if self.fuzzy_filter == "":
+                return True
+            else:
+                return fuzz.ratio(self.fuzzy_filter, log_item.message) > 50
+        
+        #storage iteration
+        for log_item in logs:
+            if  level_ok() and node_name_ok() and fuzzy_ok():
                 log_container.mount(self.build_log_message(log_item))
 
         log_container.scroll_end()
@@ -214,7 +269,7 @@ class ViewTUI(App):
         log_time = time.strftime("%Y-%m-%d %H:%M:%S")
         log_item = LogItem(log_time, message, level, name)
         self.storage.append(log_item)
-        if level in self.filter_levels and name in self.active_filter_names:
+        if level in self.filter_levels and name in self.active_filter_node_names:
             self.post_message(LogMessage(log_item))
 
     
@@ -272,15 +327,15 @@ class ViewTUI(App):
         for id in ids:
             name = self.nodes_names[id]
             names.append(name)
-        self.active_filter_names = names
+        self.active_filter_node_names = names
 
     def filter_by_key(self, event):
         if event.key in self.nodes_names:
             name = self.nodes_names[event.key]
-            if name in self.active_filter_names:
-                self.active_filter_names.remove(name)
+            if name in self.active_filter_node_names:
+                self.active_filter_node_names.remove(name)
             else:
-                self.active_filter_names.append(name)
+                self.active_filter_node_names.append(name)
         self.update_log()
     
     #region method to test
