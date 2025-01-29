@@ -38,15 +38,8 @@ class LogMessage(Message):
         super().__init__()
         self.message = log_item
 
-class Stopwatch(HorizontalGroup):
-    """A stopwatch widget."""
 
-    def compose(self) -> ComposeResult:
-        """Create child widgets of a stopwatch."""
-        yield Button("Start", id="start", variant="success")
-        yield Button("Stop", id="stop", variant="error")
-
-
+# region node name filter modal window
 class FilterModal(ModalScreen):
     DEFAULT_CSS = """
     InputModal {
@@ -84,43 +77,22 @@ class FilterModal(ModalScreen):
         #    vvvvvvv dismiss the modal screen;
         self.dismiss(self.query_one(SelectionList).selected)
         # self.app.pop_screen()
-
+# endregion node name filter modal window
 
 class ViewTUI(App):
     CSS_PATH = "tui_style.tcss"
-    t = Binding(key="t", action="xxx", description="XXX")
     BINDINGS = [
         Binding(key="q", action="quit", description="Quit"),
-        t,
+        ("d", "debug", "debug"),
         ("i", "info", "info"),
         ("w", "warning", "warning"),
         ("e", "error", "error"),
         Binding(key="f", action="open_filter", description="filter"),
     ]
 
-    # COMMANDS =  {SimpleProvider}
-    def get_system_commands(self, screen: Screen) -> Iterable[SystemCommand]:
-        """Add command to palettate
-
-        """
-        yield SystemCommand("clear", "clear all", self.clear_all)
-
-    def clear_all(self):
-        self.storage.clear()
-        self.update_log()
-        
-
-    CSS = """
-        # HorizontalGroup#footer-outer {
-        #     height: 2;
-        #     dock: bottom;
-        # }
-       
-        Footer {
-            background: #282c34;
-            color: white;
-        }
-    """
+    
+    
+    
     def __init__(self, nodes_name):
         super().__init__()
         self.storage = deque(maxlen=10)
@@ -130,7 +102,23 @@ class ViewTUI(App):
 
         self.updating = True
         
+    #region palette command region
+    def get_system_commands(self, screen: Screen) -> Iterable[SystemCommand]:
+        """Add command to palette
 
+        """
+        yield SystemCommand("clear", "clear all", self.clear_all)
+    #endregion palette command region
+
+    def clear_all(self):
+        """
+        clear storage and rerender
+        """
+        self.storage.clear()
+        self.update_log()
+        
+
+    #region filter by node name
     def action_open_filter(self):
         self.push_screen(FilterModal(self.nodes_names, self.active_filter_names), self.filter_modal_callback)
 
@@ -145,12 +133,12 @@ class ViewTUI(App):
         self.active_filter_names = result
         self.update_log()
 
-
+    #endregion
 
     def compose(self):
         self.footer = Footer()
         yield self.footer
-        yield VerticalScroll(Stopwatch(), id="log_container")
+        yield VerticalScroll(id="log_container")
 
 
     def map_style(self, level: LogLevel):
@@ -169,11 +157,6 @@ class ViewTUI(App):
         else:
             return "debug"
 
-    def action_xxx(self):
-        print("00000000000000000000000000000000000000")
-        
-        print(dir(VerticalScroll))
-        print("1111--00000000000000000000000000000000000000")
 
     def on_log_message(self, event: LogMessage):
         """render log message item
@@ -189,27 +172,22 @@ class ViewTUI(App):
         except NoMatches:
             pass
         
-        
 
-        
-
-
-    def on_mount(self):
-        # footer = self.query_one("#footer-outer")
-        # footer.mount(Label("Hello World"))
-        new_binding = ()
-
-        if new_binding not in self._bindings:
-            self._bindings.bind("0", "notify('New Binding!')", "name")  # Add new binding
-            for b in self._bindings:
-                print(b)
-            self.refresh()  # Update UI to reflect changes
-            self.notify("Added new binding: 'n'")
 
     def build_log_message(self, log_item: LogItem):
+        """convert log item to string and return Static widget
+
+        Args:
+            log_item (LogItem): _description_
+
+        Returns:
+            _type_: Static widget
+        """
         return Static(f"{log_item.time} - {log_item.name}: {log_item.message}", classes=self.map_style(log_item.level))
     
     def update_log(self):
+        """clear and render all logs from storage
+        """
         log_container = self.query_one("#log_container")
         log_container.remove_children()
 
@@ -241,34 +219,47 @@ class ViewTUI(App):
 
     
 
-    def action_toggle_updating(self):
-        self.updating = not self.updating
-        desc = "Stop updating" if self.updating else "Start updating"
+
+    #region filter by log level
+    def level_filter(self, level):
+        """Add or remove level from filter
+
+        Args:
+            level (_type_): _description_
+        """
+        desc = ""
+        if level in self.filter_levels:
+            self.filter_levels.remove(level)
+            desc = f"filter {level.name}"
+            
+        else:
+            desc = f"allow {level.name}"
+            self.filter_levels.append(level)
         self.notify(desc)
-        self.bind("i", "app.info", description=desc)
-        # self.screen.post_message(events.ScreenResume())
-        self.footer.bindings_changed(self.screen)
-        # self.refresh_bindings()
+        self.update_log()
+
+    def action_debug(self):
+        self.level_filter(LogLevel.DEBUG)
 
     def action_info(self):
-        self.action_toggle_updating()
-        if LogLevel.INFO in self.filter_levels:
-            self.filter_levels.remove(LogLevel.INFO)
-        else:
-            self.filter_levels.append(LogLevel.INFO)
+        self.level_filter(LogLevel.INFO)
+
+    def action_warning(self):
+        self.level_filter(LogLevel.WARN)
+
+    def action_error(self):
+        self.level_filter(LogLevel.ERROR)
         
+    #endregion filter by log level
+
     def on_key(self, event):
         # if event.key == "i":
         if event.key == "s":
             self.modal.visible = True
             self.refresh_layout()
-        if event.key == "w":
-            self.update(LogLevel.WARN, "name", "warning")
-        elif event.key == "e":
-            self.update(LogLevel.ERROR, "name", "error")
-
-        self.filter_by_key(event)
-        self.update_log()
+        
+        # self.filter_by_key(event)
+        # self.update_log()
 
     def filter_by_ids(self, ids):
         """_summary_
@@ -292,6 +283,19 @@ class ViewTUI(App):
                 self.active_filter_names.append(name)
         self.update_log()
     
+    #region method to test
+
+    def action_toggle_updating(self):
+        """not use function try to toggle bindings description"""
+        self.updating = not self.updating
+        desc = "Stop updating" if self.updating else "Start updating"
+        self.notify(desc)
+        self.bind("i", "app.info", description=desc)
+        # self.screen.post_message(events.ScreenResume())
+        self.footer.bindings_changed(self.screen)
+        # self.refresh_bindings()
+    #endregion
+
 if __name__ == "__main__":
     app = ViewTUI()
     app.run()
