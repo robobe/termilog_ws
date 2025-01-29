@@ -1,0 +1,26 @@
+/* Custom styling for the SelectionList widget */
+#selection_list {
+    padding: 1rem;
+    border-radius: 8px;
+    border: 2px solid #007BFF;
+}
+
+/* Styling for selected item */
+#selection_list .selected {
+    background-color: #007BFF;   /* Background color for selected item */
+    color: white;                 /* Text color for selected item */
+}
+
+/* Styling for hovered items */
+#selection_list .hover {
+    background-color: #f0f8ff;    /* Light background when hovered */
+    color: #007BFF;                /* Text color when hovered */
+}
+
+/* Styling for normal items (non-selected and non-hovered) */
+#selection_list > li {
+    padding: 0.5rem;
+    color: #333;
+    background-color: #f9f9f9;    /* Light background for unselected items */
+    border-radius: 4px;
+}

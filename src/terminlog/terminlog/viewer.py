@@ -9,12 +9,12 @@ from rcl_interfaces.msg import Log
 from view_tui import ViewTUI
 from datetime import datetime
 class Viewer(Node):
-    def __init__(self, app: ViewTUI):
+    def __init__(self):
         super().__init__("terminlog_viewer")
         self.create_timer(2, self.timer_callback)
-        self.app = app
-        self.app.register_filter_name("0", "name")
-        self.app.register_filter_name("1", "xxx")
+        self.nodes_name = ["name", "xxx"]
+        self.app = ViewTUI(self.nodes_name)
+
 
     def timer_callback(self):
         # return
@@ -37,15 +37,15 @@ class Viewer(Node):
 async def main():
     rclpy.init()
     
-    app = ViewTUI()
-    node = Viewer(app)
+    
+    node = Viewer()
 
     def ros_spin():
         rclpy.spin(node)
 
     loop = asyncio.get_event_loop()
     loop.run_in_executor(None, ros_spin)
-    await app.run_async()
+    await node.app.run_async()
     node.destroy_node()
     rclpy.shutdown()
 
