@@ -10,5 +10,12 @@
         "${workspaceFolder}/terminlog/",
         "/opt/ros/humble/lib/python3.10/site-packages/",
         "/opt/ros/humble/local/lib/python3.10/dist-packages/"
-    ]
+    ],
+    "terminal.integrated.profiles.linux": {
+        "bash": {
+            "path": "bash",
+            "icon": "terminal-bash",
+            "args": ["--rcfile", "${workspaceFolder}/env.sh"]
+        }
+    }
 }
