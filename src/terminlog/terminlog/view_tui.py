@@ -19,6 +19,7 @@ from textual._color_constants import COLOR_NAME_TO_RGB
 from rapidfuzz import fuzz
 from terminlog import LogItem, LogLevel
 
+LOG_LEVEL_FILTER_CLEAR = 0
 class LogMessage(Message):
     """message use to notify between working thread and main thread"""
     def __init__(self, log_item: LogItem):
@@ -28,24 +29,31 @@ class LogMessage(Message):
 #region prompt
 class PromptModal(ModalScreen[str]):
     DEFAULT_CSS = """
-    InputModal {
+    PromptModal {
         align: center middle;
     }
 
-    InputModal > Container {
+    PromptModal > Container {
+        width: auto;
+        height: auto;
+        border: thick $background 80%;
+        background: $surface;
+    }
+
+    PromptModal > Container > Horizontal {
         width: auto;
         height: auto;
     }
 
-    InputModal > Container > Input {
-        width: 32;
+    PromptModal > Container > Horizontal > Button {
+        margin: 2 4;
     }
     """
 
     def compose(self) -> ComposeResult:
         with Container():
             yield Label("Are you sure?")
-            with HorizontalGroup():
+            with Horizontal():
                 yield Button("Ok", variant="success", id="ok")
                 yield Button("Cancel", variant="error", id="cancel")
 
@@ -84,18 +92,16 @@ class InputModal(ModalScreen[str]):
 # region node name filter modal window
 class FilterModal(ModalScreen):
     DEFAULT_CSS = """
-    InputModal {
+    FilterModal {
         align: center middle;
     }
 
-    InputModal > Container {
-        width: auto;
+    FilterModal > Container > SelectionList {
+        width: 100;
         height: auto;
     }
 
-    InputModal > Container > Input {
-        width: 32;
-    }
+   
     """
     def __init__(self, filters, selected):
         super().__init__()
@@ -104,10 +110,13 @@ class FilterModal(ModalScreen):
 
     def compose(self) -> ComposeResult:
         with Container():
+            yield Label("View Selected nodes")
             yield SelectionList[int](  
             id="selection_list"
             )
-            yield Button("Submit")
+            with Horizontal():
+                yield Button("Filter")
+                yield Button("Cancel")
 
     def _on_mount(self, event):
         obj = self.query_one(SelectionList)
@@ -128,8 +137,9 @@ class ViewTUI(App):
         ("w", "warning", "warning"),
         ("e", "error", "error"),
         Binding(key="f", action="open_filter", description="filter by node name"),
-        Binding(key="r", action="reset_filter", description="reset all filter"),
+        Binding(key="c", action="reset_filter", description="clear all filter"),
         Binding(key="z", action="free_filter", description="fuzzy filter"),
+        Binding(key="r", action="real_time", description="realtime"),
     ]
 
     
@@ -138,18 +148,19 @@ class ViewTUI(App):
     def __init__(self, nodes_name, queue_size=100):
         super().__init__()
         self.storage = deque(maxlen=queue_size)
-        self.filter_levels = [LogLevel.DEBUG, LogLevel.INFO, LogLevel.WARN, LogLevel.ERROR]
+        self.filter_levels = LOG_LEVEL_FILTER_CLEAR#[LogLevel.DEBUG, LogLevel.INFO, LogLevel.WARN, LogLevel.ERROR]
         self.nodes_names = nodes_name
         self.active_filter_node_names = [name for name in self.nodes_names]
         self.fuzzy_filter = ""
         self.updating = True
+        self.realtime = True
         
     #region palette command region
     def get_system_commands(self, screen: Screen) -> Iterable[SystemCommand]:
         """Add command to palette
 
         """
-        yield SystemCommand("clear", "clear all", self.clear_all)
+        yield SystemCommand("clear", "clear storage", self.clear_all)
     #endregion palette command region
 
     def clear_all(self):
@@ -255,7 +266,10 @@ class ViewTUI(App):
         """
         log_container = self.query_one("#log_container")
         def level_ok():
-            return log_item.level in self.filter_levels
+            if self.filter_levels == LOG_LEVEL_FILTER_CLEAR:
+                return True
+            else:
+                return log_item.level >= self.filter_levels
         
         def node_name_ok():
             return log_item.name in self.active_filter_node_names
@@ -271,7 +285,8 @@ class ViewTUI(App):
             if  level_ok() and node_name_ok() and fuzzy_ok():
                 log_container.mount(self.build_log_message(log_item))
 
-        log_container.scroll_end()
+        if self.realtime:
+            log_container.scroll_end()
         
     def update(self, time, level, name, message):
         """update log item from ROS
@@ -290,8 +305,7 @@ class ViewTUI(App):
         log_time = time.strftime("%Y-%m-%d %H:%M:%S")
         log_item = LogItem(log_time, message, level, name)
         self.storage.append(log_item)
-        if level in self.filter_levels and name in self.active_filter_node_names:
-            self.post_message(LogMessage(log_item))
+        self.post_message(LogMessage(log_item))
 
 
     #region filter by log level
@@ -302,18 +316,25 @@ class ViewTUI(App):
             level (_type_): _description_
         """
         desc = ""
-        if level in self.filter_levels:
-            self.filter_levels.remove(level)
-            desc = f"filter {level.name}"
+        if level == self.filter_levels:
+            self.filter_levels = LOG_LEVEL_FILTER_CLEAR
+            desc = f"DEBUG level"
             
         else:
-            desc = f"allow {level.name}"
-            self.filter_levels.append(level)
+            desc = f"{level.name} level"
+            self.filter_levels = level
         self.notify(desc)
         self.update_log()
     #endregion filter by log level
 
     # region actions
+    def action_real_time(self):
+        self.realtime = not self.realtime
+        if self.realtime:
+            self.notify("Realtime active")
+            log_container = self.query_one("#log_container")
+            log_container.scroll_end()
+
     def action_quit(self):
         self.push_screen(PromptModal(), self.quit_callback)
 
@@ -324,7 +345,7 @@ class ViewTUI(App):
         
     def action_reset_filter(self):
         """reset all filters"""
-        self.filter_levels = [LogLevel.DEBUG, LogLevel.INFO, LogLevel.WARN, LogLevel.ERROR]
+        self.filter_levels = LOG_LEVEL_FILTER_CLEAR#[LogLevel.DEBUG, LogLevel.INFO, LogLevel.WARN, LogLevel.ERROR]
         self.active_filter_node_names = [name for name in self.nodes_names]
         self.fuzzy_filter = ""
         self.update_log()

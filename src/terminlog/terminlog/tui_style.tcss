@@ -1,9 +1,9 @@
 .debug {
-    color: green;
+    color: white;
 }
 
 .info {
-    color: blue;
+    color: green;
 }
 
 .warning {
