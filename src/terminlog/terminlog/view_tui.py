@@ -20,6 +20,7 @@ from rapidfuzz import fuzz
 from terminlog import LogItem, LogLevel
 
 LOG_LEVEL_FILTER_CLEAR = 0
+FUZZY_LEVEL = 50
 class LogMessage(Message):
     """message use to notify between working thread and main thread"""
     def __init__(self, log_item: LogItem):
@@ -278,7 +279,7 @@ class ViewTUI(App):
             if self.fuzzy_filter == "":
                 return True
             else:
-                return fuzz.ratio(self.fuzzy_filter, log_item.message) > 50
+                return fuzz.ratio(self.fuzzy_filter, log_item.message) > FUZZY_LEVEL
         
         #storage iteration
         for log_item in logs:
