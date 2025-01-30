@@ -1,5 +1,5 @@
 from textual.app import App, ComposeResult, SystemCommand
-from textual.widgets import Static, Footer, Button, SelectionList, OptionList, Input
+from textual.widgets import Static, Footer, Button, SelectionList, Label, Input
 from textual.containers import VerticalScroll, HorizontalGroup, Horizontal, Container
 from textual.command import Provider, Hit, Hits, SimpleProvider, SimpleCommand
 
@@ -25,6 +25,37 @@ class LogMessage(Message):
         super().__init__()
         self.message = log_item
 
+#region prompt
+class PromptModal(ModalScreen[str]):
+    DEFAULT_CSS = """
+    InputModal {
+        align: center middle;
+    }
+
+    InputModal > Container {
+        width: auto;
+        height: auto;
+    }
+
+    InputModal > Container > Input {
+        width: 32;
+    }
+    """
+
+    def compose(self) -> ComposeResult:
+        with Container():
+            yield Label("Are you sure?")
+            with HorizontalGroup():
+                yield Button("Ok", variant="success", id="ok")
+                yield Button("Cancel", variant="error", id="cancel")
+
+    
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        self.dismiss(event.button.id == "ok")
+
+
+
+#endregion
 # region free text search filter modal window
 class InputModal(ModalScreen[str]):
     DEFAULT_CSS = """
@@ -85,9 +116,7 @@ class FilterModal(ModalScreen):
             obj.add_option((name, name, selected))
     
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        #    vvvvvvv dismiss the modal screen;
         self.dismiss(self.query_one(SelectionList).selected)
-        # self.app.pop_screen()
 # endregion node name filter modal window
 
 class ViewTUI(App):
@@ -106,7 +135,7 @@ class ViewTUI(App):
     
     
     
-    def __init__(self, nodes_name, queue_size=10):
+    def __init__(self, nodes_name, queue_size=100):
         super().__init__()
         self.storage = deque(maxlen=queue_size)
         self.filter_levels = [LogLevel.DEBUG, LogLevel.INFO, LogLevel.WARN, LogLevel.ERROR]
@@ -139,7 +168,10 @@ class ViewTUI(App):
         self.update_log()
     #endregion fuzzy filter
 
-    
+
+    def quit_callback(self, result):
+        if result:
+            self.app.exit()    
 
     #region filter by node name
     
@@ -282,6 +314,9 @@ class ViewTUI(App):
     #endregion filter by log level
 
     # region actions
+    def action_quit(self):
+        self.push_screen(PromptModal(), self.quit_callback)
+
     def action_open_filter(self):
         self.push_screen(FilterModal(self.nodes_names, self.active_filter_node_names), self.filter_modal_callback)
     def action_free_filter(self):
