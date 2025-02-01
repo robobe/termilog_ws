@@ -301,7 +301,7 @@ class ViewTUI(App):
             name (_type_): _description_
             message (_type_): _description_
         """
-        level = int.from_bytes(level, byteorder="big")
+        # level = int.from_bytes(level, byteorder="big")
         level = LogLevel(level)
         log_time = time.strftime("%Y-%m-%d %H:%M:%S")
         log_item = LogItem(log_time, message, level, name)
