@@ -1,13 +1,13 @@
 {
     "python.autoComplete.extraPaths": [
-        "${workspaceFolder}/terminlog/",
+        "${workspaceFolder}/src/terminlog/",
         "/opt/ros/humble/lib/python3.10/site-packages/",
         "/opt/ros/humble/local/lib/python3.10/dist-packages"
 
     ],
 
     "python.analysis.extraPaths": [
-        "${workspaceFolder}/terminlog/",
+        "${workspaceFolder}/src/terminlog/",
         "/opt/ros/humble/lib/python3.10/site-packages/",
         "/opt/ros/humble/local/lib/python3.10/dist-packages/"
     ],

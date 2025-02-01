@@ -18,7 +18,6 @@ class Viewer(Node):
     def __init__(self):
         super().__init__("terminlog_viewer")
         self.init_parameters()
-        # self.create_timer(2, self.timer_callback)
         self.create_subscription(Log, TOPIC, self.handler, qos_profile=10)
 
         self.app = ViewTUI(self.get_parameter(NODES_TO_CAPTURE).value)
@@ -29,7 +28,6 @@ class Viewer(Node):
         Args:
             msg (Log): rcl_interfaces.msg
         """
-        # print(msg.level)
         ros_time = datetime.fromtimestamp(msg.stamp.sec + msg.stamp.nanosec / 1e9)
         self.app.update(ros_time,
                         msg.level,
@@ -39,19 +37,6 @@ class Viewer(Node):
     def init_parameters(self):
         self.declare_parameter(NODES_TO_CAPTURE, [])
         self.declare_parameter(LOG_QUEUE_SIZE, LOG_QUEUE_SIZE_DEFAULT)
-    def timer_callback(self):
-        # return
-        # log_stamp = self.get_clock().now()
-
-        # Convert the ROS time to a Python datetime object
-        # ROS time (log_stamp) is a Time object, and we need to convert it to a datetime
-        # log_time = log_stamp.to_msg()  # Convert ROS Time to ROS message
-        # ros_time = datetime.fromtimestamp(log_time.sec + log_time.nanosec / 1e9)
-
-        
-        self.get_logger().info("info msg")
-        self.get_logger().warning("warn msg")
-        self.get_logger().error("error msg")
         
 
 async def main():
