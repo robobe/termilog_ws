@@ -273,7 +273,10 @@ class ViewTUI(App):
                 return log_item.level >= self.filter_levels
         
         def node_name_ok():
-            return log_item.name in self.active_filter_node_names
+            if len(self.nodes_names) == 0:
+                return True
+            else:
+                return log_item.name in self.active_filter_node_names
         
         def fuzzy_ok():
             if self.fuzzy_filter == "":

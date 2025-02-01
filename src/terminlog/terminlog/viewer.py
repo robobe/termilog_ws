@@ -37,7 +37,7 @@ class Viewer(Node):
                         msg.msg)
 
     def init_parameters(self):
-        self.declare_parameter(NODES_TO_CAPTURE, ["test_logger_node", "xxx"])
+        self.declare_parameter(NODES_TO_CAPTURE, [])
         self.declare_parameter(LOG_QUEUE_SIZE, LOG_QUEUE_SIZE_DEFAULT)
     def timer_callback(self):
         # return
