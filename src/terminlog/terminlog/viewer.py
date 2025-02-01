@@ -18,9 +18,14 @@ class Viewer(Node):
     def __init__(self):
         super().__init__("terminlog_viewer")
         self.init_parameters()
+        #TODO: qos or depth, 
         self.create_subscription(Log, TOPIC, self.handler, qos_profile=10)
 
-        self.app = ViewTUI(self.get_parameter(NODES_TO_CAPTURE).value)
+        self.app = ViewTUI(self.get_parameter(NODES_TO_CAPTURE).value, active_node_names_cb=self.active_nodes_filter)
+
+    def active_nodes_filter(self):
+        node_names = self.get_node_names()
+        return node_names
 
     def handler(self, msg:Log):
         """parse rosout topic log message 

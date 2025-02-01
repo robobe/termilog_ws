@@ -131,6 +131,7 @@ class FilterModal(ModalScreen):
 
 class ViewTUI(App):
     CSS_PATH = "tui_style.tcss"
+    #TODO: check different bingings and reorganize
     BINDINGS = [
         Binding(key="q", action="quit", description="Quit"),
         ("d", "debug", "debug"),
@@ -146,12 +147,13 @@ class ViewTUI(App):
     
     
     
-    def __init__(self, nodes_name, queue_size=100):
+    def __init__(self, nodes_name, queue_size=100, active_node_names_cb = None):
         super().__init__()
         self.storage = deque(maxlen=queue_size)
         self.filter_levels = LOG_LEVEL_FILTER_CLEAR#[LogLevel.DEBUG, LogLevel.INFO, LogLevel.WARN, LogLevel.ERROR]
         self.nodes_names = nodes_name
         self.active_filter_node_names = [name for name in self.nodes_names]
+        self.active_node_names_cb = active_node_names_cb
         self.fuzzy_filter = ""
         self.updating = True
         self.realtime = True
@@ -343,7 +345,11 @@ class ViewTUI(App):
         self.push_screen(PromptModal(), self.quit_callback)
 
     def action_open_filter(self):
-        self.push_screen(FilterModal(self.nodes_names, self.active_filter_node_names), self.filter_modal_callback)
+        node_names = self.nodes_names
+        if len(self.nodes_names) == 0 and self.active_node_names_cb is not None:
+            node_names = self.active_node_names_cb()
+        self.notify(str(node_names))
+        self.push_screen(FilterModal(node_names, self.active_filter_node_names), self.filter_modal_callback)
     def action_free_filter(self):
         self.push_screen(InputModal(), self.free_filter_callback)
         
