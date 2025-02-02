@@ -18,7 +18,7 @@ from textual.css.query import  NoMatches
 from textual._color_constants import COLOR_NAME_TO_RGB
 from rapidfuzz import fuzz
 from terminlog import LogItem, LogLevel
-
+from terminlog.input_modal import InputModal
 LOG_LEVEL_FILTER_CLEAR = 0
 FUZZY_LEVEL = 50
 class LogMessage(Message):
@@ -28,6 +28,11 @@ class LogMessage(Message):
         self.message = log_item
 
 class ClickableStatic(Static):
+    """log line
+
+    Args:
+        Static (_type_): _description_
+    """
     def __init__(self, log_item:LogItem, callback, **kwargs):
         text = f"{log_item.time} - {log_item.name}: {log_item.message}"
         super().__init__(text, **kwargs)
@@ -80,30 +85,7 @@ class PromptModal(ModalScreen[str]):
 
 
 #endregion
-# region free text search filter modal window
-class InputModal(ModalScreen[str]):
-    DEFAULT_CSS = """
-    InputModal {
-        align: center middle;
-    }
 
-    InputModal > Container {
-        width: auto;
-        height: auto;
-    }
-
-    InputModal > Container > Input {
-        width: 32;
-    }
-    """
-
-    def compose(self) -> ComposeResult:
-        with Container():
-            yield Input()
-
-    def on_input_submitted(self) -> None:
-        self.dismiss(self.query_one(Input).value)
-# endregion
 
 # region node name filter modal window
 class FilterModal(ModalScreen):
@@ -192,9 +174,11 @@ class ViewTUI(App):
     
 
     def free_filter_callback(self, result):
-        self.notify(f"fuzzy filter: {result}")
-        self.fuzzy_filter = result
-        self.update_log()
+        run_filter, filter = result
+        if run_filter:
+            self.notify(f"fuzzy filter: {filter}")
+            self.fuzzy_filter = filter
+            self.update_log()
     #endregion fuzzy filter
 
 

@@ -16,6 +16,7 @@ set(NODES
 set(APP_FILES
   terminlog/view_tui.py
   terminlog/tui_style.tcss
+  terminlog/input_modal.py
 )
 
 install(PROGRAMS
