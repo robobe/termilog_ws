@@ -14,5 +14,7 @@ class LogItem(NamedTuple):
     message: str
     level: int
     name: str
+    file: str
+    line: int
 
 

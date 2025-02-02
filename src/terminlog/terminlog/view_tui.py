@@ -2,7 +2,7 @@ from textual.app import App, ComposeResult, SystemCommand
 from textual.widgets import Static, Footer, Button, SelectionList, Label, Input
 from textual.containers import VerticalScroll, HorizontalGroup, Horizontal, Container
 from textual.command import Provider, Hit, Hits, SimpleProvider, SimpleCommand
-
+from textual.events import Click
 from textual.message import Message
 
 from collections import deque
@@ -26,6 +26,21 @@ class LogMessage(Message):
     def __init__(self, log_item: LogItem):
         super().__init__()
         self.message = log_item
+
+class ClickableStatic(Static):
+    def __init__(self, log_item:LogItem, callback, **kwargs):
+        text = f"{log_item.time} - {log_item.name}: {log_item.message}"
+        super().__init__(text, **kwargs)
+        self.log_item = log_item
+        self.callback = callback
+
+    def on_click(self, event: Click):
+        if self.callback:
+            self.callback(self.log_item)
+        else:
+            msg = f"file: {self.log_item.file}\nline_no:{self.log_item.line}"
+            self.notify(msg)
+
 
 #region prompt
 class PromptModal(ModalScreen[str]):
@@ -239,7 +254,8 @@ class ViewTUI(App):
         except NoMatches:
             pass
         
-
+    def log_link_click_handler(self):
+        self.notify("click")
 
     def build_log_message(self, log_item: LogItem):
         """convert log item to string and return Static widget
@@ -250,7 +266,9 @@ class ViewTUI(App):
         Returns:
             _type_: Static widget
         """
-        return Static(f"{log_item.time} - {log_item.name}: {log_item.message}", classes=self.map_style(log_item.level))
+        # callback = self.log_link_click_handler
+        callback = None
+        return ClickableStatic(log_item, callback, classes=self.map_style(log_item.level))
     
     def update_log(self):
         """clear and render all logs from storage
@@ -294,7 +312,7 @@ class ViewTUI(App):
         if self.realtime:
             log_container.scroll_end()
         
-    def update(self, time, level, name, message):
+    def update(self, time, level, name, message, file, line):
         """update log item from ROS
         save log item as generic python struct
         save to storage 
@@ -309,7 +327,7 @@ class ViewTUI(App):
         # level = int.from_bytes(level, byteorder="big")
         level = LogLevel(level)
         log_time = time.strftime("%Y-%m-%d %H:%M:%S")
-        log_item = LogItem(log_time, message, level, name)
+        log_item = LogItem(log_time, message, level, name, file, line)
         self.storage.append(log_item)
         self.post_message(LogMessage(log_item))
 

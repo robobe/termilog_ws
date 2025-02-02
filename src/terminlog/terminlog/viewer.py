@@ -37,7 +37,9 @@ class Viewer(Node):
         self.app.update(ros_time,
                         msg.level,
                         msg.name,
-                        msg.msg)
+                        msg.msg,
+                        msg.file,
+                        msg.line)
 
     def init_parameters(self):
         self.declare_parameter(NODES_TO_CAPTURE, [])
