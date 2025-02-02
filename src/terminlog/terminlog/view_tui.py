@@ -4,7 +4,7 @@ from textual.containers import VerticalScroll, HorizontalGroup, Horizontal, Cont
 from textual.command import Provider, Hit, Hits, SimpleProvider, SimpleCommand
 from textual.events import Click
 from textual.message import Message
-
+import re
 from collections import deque
 from textual.binding import Binding
 from textual.screen import Screen, ModalScreen
@@ -21,6 +21,8 @@ from terminlog import LogItem, LogLevel
 from terminlog.input_modal import InputModal
 LOG_LEVEL_FILTER_CLEAR = 0
 FUZZY_LEVEL = 50
+FREE_FILTER_FUZZY_TYPE = "fuzzy"
+FREE_FILTER_REGEX_TYPE = "regex"
 class LogMessage(Message):
     """message use to notify between working thread and main thread"""
     def __init__(self, log_item: LogItem):
@@ -154,6 +156,7 @@ class ViewTUI(App):
         self.fuzzy_filter = ""
         self.updating = True
         self.realtime = True
+        self.free_filter_type = "fuzzy"
         
     #region palette command region
     def get_system_commands(self, screen: Screen) -> Iterable[SystemCommand]:
@@ -174,9 +177,9 @@ class ViewTUI(App):
     
 
     def free_filter_callback(self, result):
-        run_filter, filter = result
+        run_filter, filter, self.free_filter_type = result
         if run_filter:
-            self.notify(f"fuzzy filter: {filter}")
+            self.notify(f"{self.free_filter_type} filter: {filter}")
             self.fuzzy_filter = filter
             self.update_log()
     #endregion fuzzy filter
@@ -282,6 +285,13 @@ class ViewTUI(App):
             else:
                 return log_item.name in self.active_filter_node_names
         
+        def reg_filter_ok():
+            regex = re.compile(self.fuzzy_filter, re.IGNORECASE)
+            message_ok = regex.search(log_item.message) is not None
+            name_ok = regex.search(log_item.name) is not None
+            #TODO: regex on file name
+            return name_ok or message_ok
+
         def fuzzy_filter_ok():
             message_ok = fuzz.ratio(self.fuzzy_filter, log_item.message) > FUZZY_LEVEL 
             name_ok = fuzz.ratio(self.fuzzy_filter, log_item.name) > FUZZY_LEVEL
@@ -292,7 +302,9 @@ class ViewTUI(App):
             if self.fuzzy_filter == "":
                 return True
             else:
-                return fuzzy_filter_ok()
+                if self.free_filter_type == FREE_FILTER_FUZZY_TYPE:
+                    return fuzzy_filter_ok()
+                return reg_filter_ok()
                 
             
         
