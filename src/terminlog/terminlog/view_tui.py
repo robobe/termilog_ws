@@ -282,15 +282,23 @@ class ViewTUI(App):
             else:
                 return log_item.name in self.active_filter_node_names
         
-        def fuzzy_ok():
+        def fuzzy_filter_ok():
+            message_ok = fuzz.ratio(self.fuzzy_filter, log_item.message) > FUZZY_LEVEL 
+            name_ok = fuzz.ratio(self.fuzzy_filter, log_item.name) > FUZZY_LEVEL
+            #TODO: fuzzy on file name
+            return name_ok or message_ok
+
+        def input_filter_ok():
             if self.fuzzy_filter == "":
                 return True
             else:
-                return fuzz.ratio(self.fuzzy_filter, log_item.message) > FUZZY_LEVEL
+                return fuzzy_filter_ok()
+                
+            
         
         #storage iteration
         for log_item in logs:
-            if  level_ok() and node_name_ok() and fuzzy_ok():
+            if  level_ok() and node_name_ok() and input_filter_ok():
                 log_container.mount(self.build_log_message(log_item))
 
         if self.realtime:
