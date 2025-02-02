@@ -18,11 +18,15 @@ from textual.css.query import  NoMatches
 from textual._color_constants import COLOR_NAME_TO_RGB
 from rapidfuzz import fuzz
 from terminlog import LogItem, LogLevel
-from terminlog.input_modal import InputModal
+from terminlog.input_modal import InputModal, FreeTextFilterData
+
+
 LOG_LEVEL_FILTER_CLEAR = 0
 FUZZY_LEVEL = 50
 FREE_FILTER_FUZZY_TYPE = "fuzzy"
 FREE_FILTER_REGEX_TYPE = "regex"
+
+
 class LogMessage(Message):
     """message use to notify between working thread and main thread"""
     def __init__(self, log_item: LogItem):
@@ -176,11 +180,11 @@ class ViewTUI(App):
     #region fuzzy filter
     
 
-    def free_filter_callback(self, result):
-        run_filter, filter, self.free_filter_type = result
-        if run_filter:
-            self.notify(f"{self.free_filter_type} filter: {filter}")
-            self.fuzzy_filter = filter
+    def free_filter_callback(self, result: FreeTextFilterData):
+        self.free_filter_type = result.filter_type
+        if result.active:
+            self.notify(f"{self.free_filter_type} filter: {result.filter}")
+            self.fuzzy_filter = result.filter
             self.update_log()
     #endregion fuzzy filter
 
@@ -373,7 +377,7 @@ class ViewTUI(App):
         self.notify(str(node_names))
         self.push_screen(FilterModal(node_names, self.active_filter_node_names), self.filter_modal_callback)
     def action_free_filter(self):
-        self.push_screen(InputModal(), self.free_filter_callback)
+        self.push_screen(InputModal(self.fuzzy_filter), self.free_filter_callback)
         
     def action_reset_filter(self):
         """reset all filters"""
