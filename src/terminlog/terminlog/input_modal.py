@@ -17,26 +17,48 @@ class InputModal(ModalScreen[str]):
     }
 
     InputModal > Container {
-        width: auto;
-        height: auto;
-        border: thick $background 80%;
+        width: 40;
+        height: 13;
+        border: thick $background 50%;
         background: $surface;
     }
 
     InputModal > Container > Vertical > Input {
-        width: 32;
+        align: center middle;
+        color: cyan;
+        width: 100%;
     }
 
     InputModal > Container > Vertical > Label {
         text-align: center;
         text-style: bold;
         align: center middle;
+        color: cyan;
+        width: 100%;
     }
 
     InputModal > Container > Vertical > RadioSet {
         layout: horizontal;
+        align: center middle;
+        width: 100%;
+    }
+
+    InputModal > Container > Vertical > RadioSet > RadioButton {
+        margin-right: 5;
+    }
+
+    InputModal > Container > Vertical > Horizontal  {
+        width: 100%;
+        height: auto;
+        align: center middle;
+    }
+
+    InputModal > Container > Vertical > Horizontal > Button {
+        margin: 1 1 1 1;
     }
     """
+
+
     def __init__(self, filter):
         super().__init__()
         self.filter_type = "fuzzy"
