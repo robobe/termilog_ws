@@ -1,0 +1,6 @@
+/terminlog_viewer:
+  ros__parameters:
+    log_queue_size: 100
+    nodes_to_capture:
+    - node_a
+    - node_b
