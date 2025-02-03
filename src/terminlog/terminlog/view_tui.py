@@ -19,7 +19,7 @@ from textual._color_constants import COLOR_NAME_TO_RGB
 from rapidfuzz import fuzz
 from terminlog import LogItem, LogLevel
 from terminlog.input_modal import InputModal, FreeTextFilterData
-
+from typing import NamedTuple, List
 
 LOG_LEVEL_FILTER_CLEAR = 0
 FUZZY_LEVEL = 50
@@ -100,6 +100,10 @@ class PromptModal(ModalScreen[str]):
 
 
 # region node name filter modal window
+class FilterData(NamedTuple):
+    active: bool
+    filter: List[str]
+
 class FilterModal(ModalScreen):
     DEFAULT_CSS = """
     FilterModal {
@@ -149,11 +153,11 @@ class FilterModal(ModalScreen):
             obj.add_option((name, name, selected))
     
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        self.dismiss(self.query_one(SelectionList).selected)
+        self.dismiss(FilterData(True, self.query_one(SelectionList).selected))
 
     def on_key(self, event):
         if event.key == "escape":
-            self.dismiss(False)
+            self.dismiss(FilterData(False, []))
 # endregion node name filter modal window
 
 class ViewTUI(App):
@@ -220,16 +224,17 @@ class ViewTUI(App):
     #region filter by node name
     
 
-    def filter_modal_callback(self, result) -> None:
+    def filter_modal_callback(self, result: FilterData) -> None:
         """filter by name callback from module
         update active_filter and render from storage
 
         Args:
             result (_type_): _description_
         """
-        self.notify("filter by nodes name")
-        self.active_filter_node_names = result
-        self.update_log()
+        if result.active:
+            self.notify("filter by nodes name")
+            self.active_filter_node_names = result.filter
+            self.update_log()
 
     #endregion
 
