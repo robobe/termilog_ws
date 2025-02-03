@@ -2,3 +2,4 @@ build/
 log/
 install/
 *.pyc
+**/.obj-x86_64-linux-gnu
