@@ -12,6 +12,25 @@
         "type": "shell",
         "command": "textual console",
         "problemMatcher": []
+      },
+      {
+        "label": "colcon",
+        "type": "shell",
+        "command": "colcon build",
+        "problemMatcher": [],
+        "options": {
+          "cwd": "${workspaceFolder}"
+        }
+      },
+      {
+        "label": "create debian package",
+        "type": "shell",
+        "command": "cpack",
+        "options": {
+          "cwd": "${workspaceFolder}/build/terminlog"
+        },
+        "dependsOn": ["colcon"],
+        "problemMatcher": []
       }
     ]
   }
