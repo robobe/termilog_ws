@@ -3,8 +3,9 @@
 
 import asyncio
 import rclpy
-from rclpy.node import Node 
-from rcl_interfaces.msg import Log
+from rclpy.node import Node
+from rclpy.parameter import ParameterType
+from rcl_interfaces.msg import Log, ParameterDescriptor
 from view_tui import ViewTUI
 from datetime import datetime
 
@@ -20,8 +21,8 @@ class Viewer(Node):
         self.init_parameters()
         #TODO: qos or depth, 
         self.create_subscription(Log, TOPIC, self.handler, qos_profile=10)
-
-        self.app = ViewTUI(self.get_parameter(NODES_TO_CAPTURE).value, active_node_names_cb=self.active_nodes_filter)
+        nodes_name = self.get_parameter(NODES_TO_CAPTURE).get_parameter_value().string_array_value
+        self.app = ViewTUI(nodes_name, active_node_names_cb=self.active_nodes_filter)
 
     def active_nodes_filter(self):
         node_names = self.get_node_names()
@@ -42,7 +43,11 @@ class Viewer(Node):
                         msg.line)
 
     def init_parameters(self):
-        self.declare_parameter(NODES_TO_CAPTURE, [])
+        descriptor = ParameterDescriptor(
+            description="Nodes to capture",
+            type=ParameterType.PARAMETER_STRING_ARRAY
+        )
+        self.declare_parameter(NODES_TO_CAPTURE, [''], descriptor=descriptor)
         self.declare_parameter(LOG_QUEUE_SIZE, LOG_QUEUE_SIZE_DEFAULT)
         
 
