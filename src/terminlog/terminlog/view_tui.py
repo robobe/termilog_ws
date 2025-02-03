@@ -1,6 +1,6 @@
 from textual.app import App, ComposeResult, SystemCommand
 from textual.widgets import Static, Footer, Button, SelectionList, Label, Input
-from textual.containers import VerticalScroll, HorizontalGroup, Horizontal, Container
+from textual.containers import VerticalScroll, Vertical, Horizontal, Container
 from textual.command import Provider, Hit, Hits, SimpleProvider, SimpleCommand
 from textual.events import Click
 from textual.message import Message
@@ -110,24 +110,32 @@ class FilterModal(ModalScreen):
         align: center middle;
     }
 
+    FilterModal > Container > Vertical > Label {
+        text-align: center;
+        text-style: bold;
+        align: center middle;
+        color: cyan;
+        width: 100%;
+    }
+
     FilterModal > Container {
         width: 60;
-        height: 15;
+        height: 16;
         border: thick $background 80%;
         background: $surface;
         align: center middle;
     }
 
-    FilterModal > Container > SelectionList {
+    FilterModal > Container > Vertical > SelectionList {
         align: center middle;
         width: 90%;
         height: 8;
     }
 
-    FilterModal > Container > Horizontal{
+    FilterModal > Container > Vertical >Horizontal{
         align: center middle;
     }
-    FilterModal > Container > Horizontal > Button {
+    FilterModal > Container > Vertical > Horizontal > Button {
         margin: 2 4;
     }
     """
@@ -138,13 +146,14 @@ class FilterModal(ModalScreen):
 
     def compose(self) -> ComposeResult:
         with Container():
-            yield Label("View Selected nodes")
-            yield SelectionList[int](  
-            id="selection_list"
-            )
-            with Horizontal():
-                yield Button("Filter", variant="success")
-                yield Button("Cancel", variant="error")
+            with Vertical():
+                yield Label("View Selected nodes")
+                yield SelectionList[int](  
+                id="selection_list"
+                )
+                with Horizontal():
+                    yield Button("Filter", variant="success")
+                    yield Button("Esc", variant="error")
 
     def _on_mount(self, event):
         obj = self.query_one(SelectionList)
@@ -153,11 +162,12 @@ class FilterModal(ModalScreen):
             obj.add_option((name, name, selected))
     
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        self.dismiss(FilterData(True, self.query_one(SelectionList).selected))
+        ok = event.button.id == "ok"
+        self.dismiss(FilterData(ok, self.query_one(SelectionList).selected))
 
     def on_key(self, event):
         if event.key == "escape":
-            self.dismiss(FilterData(False, []))
+            self.dismiss(FilterData(False, ""))
 # endregion node name filter modal window
 
 class ViewTUI(App):

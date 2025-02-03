@@ -75,7 +75,7 @@ class InputModal(ModalScreen[str]):
                 yield Input(value=self.filter)
                 with Horizontal():
                     yield Button("Ok", variant="success", id="ok")
-                    yield Button("Cancel", variant="error", id="cancel")
+                    yield Button("Escape", variant="error", id="cancel")
 
     def on_input_submitted(self) -> None:
         self.dismiss(FreeTextFilterData(True, self.query_one(Input).value, self.filter_type))
@@ -83,6 +83,10 @@ class InputModal(ModalScreen[str]):
     def on_radio_set_changed(self, event: RadioSet.Changed) -> None:
         """Handle radio button selection changes."""
         self.filter_type = event.pressed.label
+
+    def on_key(self, event):
+        if event.key == "escape":
+            self.dismiss(FreeTextFilterData(False, "", ""))
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss(FreeTextFilterData(event.button.id == "ok", self.query_one(Input).value, self.filter_type))
