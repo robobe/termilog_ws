@@ -35,7 +35,7 @@ class LogMessage(Message):
 
 class ClickableStatic(Static):
     """log line
-
+    with notify when click 
     Args:
         Static (_type_): _description_
     """
@@ -46,6 +46,12 @@ class ClickableStatic(Static):
         self.callback = callback
 
     def on_click(self, event: Click):
+        """click handler
+        Run callback or notify log message file and line number
+
+        Args:
+            event (Click): _description_
+        """
         if self.callback:
             self.callback(self.log_item)
         else:
@@ -100,12 +106,26 @@ class FilterModal(ModalScreen):
         align: center middle;
     }
 
-    FilterModal > Container > SelectionList {
-        width: 100;
-        height: auto;
+    FilterModal > Container {
+        width: 60;
+        height: 15;
+        border: thick $background 80%;
+        background: $surface;
+        align: center middle;
     }
 
-   
+    FilterModal > Container > SelectionList {
+        align: center middle;
+        width: 90%;
+        height: 8;
+    }
+
+    FilterModal > Container > Horizontal{
+        align: center middle;
+    }
+    FilterModal > Container > Horizontal > Button {
+        margin: 2 4;
+    }
     """
     def __init__(self, filters, selected):
         super().__init__()
@@ -119,8 +139,8 @@ class FilterModal(ModalScreen):
             id="selection_list"
             )
             with Horizontal():
-                yield Button("Filter")
-                yield Button("Cancel")
+                yield Button("Filter", variant="success")
+                yield Button("Cancel", variant="error")
 
     def _on_mount(self, event):
         obj = self.query_one(SelectionList)
@@ -130,6 +150,10 @@ class FilterModal(ModalScreen):
     
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss(self.query_one(SelectionList).selected)
+
+    def on_key(self, event):
+        if event.key == "escape":
+            self.dismiss(False)
 # endregion node name filter modal window
 
 class ViewTUI(App):
@@ -137,14 +161,14 @@ class ViewTUI(App):
     #TODO: check different bingings and reorganize
     BINDINGS = [
         Binding(key="q", action="quit", description="Quit"),
-        ("d", "debug", "debug"),
-        ("i", "info", "info"),
-        ("w", "warning", "warning"),
-        ("e", "error", "error"),
-        Binding(key="f", action="open_filter", description="filter by node name"),
-        Binding(key="c", action="reset_filter", description="clear all filter"),
-        Binding(key="z", action="free_filter", description="fuzzy filter"),
-        Binding(key="r", action="real_time", description="realtime"),
+        Binding(key="d", action="debug", description="Debug"),
+        Binding(key="i", action="info", description="Info"),
+        Binding(key="w", action="warning", description="Warning"),
+        Binding(key="e", action="error", description="Error"),
+        Binding(key="f", action="open_filter", description="Filter by node name"),
+        Binding(key="c", action="reset_filter", description="Clear all filter"),
+        Binding(key="z", action="free_filter", description="Free filter"),
+        Binding(key="r", action="real_time", description="Realtime"),
     ]
 
     
@@ -203,7 +227,7 @@ class ViewTUI(App):
         Args:
             result (_type_): _description_
         """
-        self.notify("filter by name")
+        self.notify("filter by nodes name")
         self.active_filter_node_names = result
         self.update_log()
 
@@ -374,7 +398,6 @@ class ViewTUI(App):
         node_names = self.nodes_names
         if len(self.nodes_names) == 0 and self.active_node_names_cb is not None:
             node_names = self.active_node_names_cb()
-        self.notify(str(node_names))
         self.push_screen(FilterModal(node_names, self.active_filter_node_names), self.filter_modal_callback)
     def action_free_filter(self):
         self.push_screen(InputModal(self.fuzzy_filter), self.free_filter_callback)
