@@ -1,6 +1,6 @@
 # Termilog
 
-ROS2 node to show and filter `/rosout` topic by:
+ROS2 node that show and filter `/rosout` topic by:
 - log level
 - node names
 - text in message
