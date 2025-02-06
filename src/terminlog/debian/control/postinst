@@ -3,5 +3,5 @@ set -e
 
 echo "Running post-installation script...">/tmp/postinst.log
 # Add any setup commands here, e.g., setting permissions or restarting services
-
+pip install rapidfuzz
 exit 0
