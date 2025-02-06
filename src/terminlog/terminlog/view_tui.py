@@ -1,5 +1,5 @@
 from textual.app import App, ComposeResult, SystemCommand
-from textual.widgets import Static, Footer, Button, SelectionList, Label, Input
+from textual.widgets import Static, Footer, Button, SelectionList, Label, TextArea
 from textual.containers import VerticalScroll, Vertical, Horizontal, Container
 from textual.command import Provider, Hit, Hits, SimpleProvider, SimpleCommand
 from textual.events import Click
@@ -99,6 +99,93 @@ class PromptModal(ModalScreen[str]):
 
 #endregion
 
+# region filter list
+class FilterListData(NamedTuple):
+    active: bool
+    filter: List[str]
+
+class FilterListModal(ModalScreen):
+    DEFAULT_CSS = """
+    FilterListModal {
+        align: center middle;
+    }
+    FilterListModal > Container {
+        width: 60;
+        height: 11;
+        border: thick $background 80%;
+        background: $surface;
+    }
+
+    FilterListModal > Container > Vertical {
+        width: auto;
+        height: auto;
+        align: center middle;
+    }
+
+    FilterListModal > Container > Vertical > Label {
+        text-align: center;
+        text-style: bold;
+        align: center middle;
+        color: cyan;
+        width: 100%;
+    }
+
+    FilterListModal > Container > Vertical > TextArea {
+        align: center middle;
+        width: 55;
+        height: 5;
+    }
+
+    FilterListModal > Container > Vertical > Horizontal {
+        align: center middle;
+    }
+
+    FilterListModal > Container > Vertical > Horizontal > Button {
+        margin: 0 2;
+    }
+    """
+    def __init__(self, ignore_list = []):
+        super().__init__()
+        self.ignore_list = ignore_list
+
+    def compose(self) -> ComposeResult:
+        with Container():
+            with Vertical():
+                yield Label("Ignore list: Enter or remove lines to ignore")
+                yield TextArea(id="filter_list")
+                with Horizontal():
+                    yield Button("Filter", variant="success", id="ok")
+                    yield Button("Esc", variant="error")
+
+    def _on_mount(self, event):
+        obj = self.query_one(TextArea)
+        data = "\n".join(self.ignore_list)
+        obj.text = data
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "ok":
+            msg = self.ok_msg()
+        else:
+            msg = self.cancel_msg()
+        self.dismiss(msg)
+
+    def ok_msg(self):
+        data = self.query_one(TextArea).text.split("\n")
+        data = [name for name in data if name.strip()]
+        msg = FilterListData(True, data)
+        return msg
+
+    def cancel_msg(self):
+        return FilterListData(False, [])
+
+    
+    def on_key(self, event):
+        if event.key == "escape":
+            self.dismiss(self.cancel_msg())
+
+        if event.key == "enter":
+            self.dismiss(self.ok_msg())
+# endregion filter list
 
 # region node name filter modal window
 class FilterData(NamedTuple):
@@ -164,15 +251,25 @@ class FilterModal(ModalScreen):
             obj.add_option((name, name, selected))
     
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        ok = event.button.id == "ok"
-        self.dismiss(FilterData(ok, self.query_one(SelectionList).selected))
+        if event.button.id == "ok":
+            msg = self.ok_msg()
+        else:
+            msg = self.cancel_msg()
+        self.dismiss(msg)
+
+    def cancel_msg(self):
+        return FilterData(False, "")
+    
+    def ok_msg(self):
+        data = self.query_one(SelectionList).selected
+        return FilterData(True, data)
 
     def on_key(self, event):
         if event.key == "escape":
-            self.dismiss(FilterData(False, ""))
+            self.dismiss(self.cancel_msg())
 
         if event.key == "enter":
-            self.dismiss(FilterData(True, self.query_one(SelectionList).selected))
+            self.dismiss(self.ok_msg())
 # endregion node name filter modal window
 
 class ViewTUI(App):
@@ -188,6 +285,8 @@ class ViewTUI(App):
         Binding(key="c", action="reset_filter", description="Clear filters"),
         Binding(key="f", action="free_filter", description="Free filter"),
         Binding(key="r", action="real_time", description="Realtime"),
+        Binding(key="l", action="filter_list", description="List"),
+        
     ]
 
     
@@ -207,6 +306,7 @@ class ViewTUI(App):
         self.realtime = True
         self.free_filter_type = "fuzzy"
         self.row_counter = 0
+        self.string_list_to_ignore = []
         
     #region palette command region
     def get_system_commands(self, screen: Screen) -> Iterable[SystemCommand]:
@@ -235,6 +335,12 @@ class ViewTUI(App):
             self.update_log()
     #endregion fuzzy filter
 
+    def filter_list_modal_callback(self, result: FilterListData):
+        
+        if result.active:
+            self.notify(f"Ignore filter: {result.filter}")
+            self.string_list_to_ignore = result.filter
+            self.update_log()
 
     def quit_callback(self, result):
         if result:
@@ -323,13 +429,26 @@ class ViewTUI(App):
 
     def render_logs(self, logs) -> None:
         """render log if all filter ok
-
+            main filter logic
         Args:
             logs (_type_): log item
 
         
         """
         log_container = self.query_one("#log_container")
+
+        def ignore_list_check():
+            """check if message not in ignore list
+
+            """
+            if len(self.string_list_to_ignore) == 0:
+                return True
+            else:
+                for ignore in self.string_list_to_ignore:
+                    if ignore in log_item.message:
+                        return False
+                return True
+
         def level_ok():
             if self.filter_levels == LOG_LEVEL_FILTER_CLEAR:
                 return True
@@ -368,7 +487,8 @@ class ViewTUI(App):
         #storage iteration
         with self.lock:
             for log_item in logs:
-                if  level_ok() and node_name_ok() and input_filter_ok():
+                # check / apply filter
+                if  level_ok() and node_name_ok() and input_filter_ok() and ignore_list_check():
                     log_container.mount(self.build_log_message(log_item))
 
         if self.realtime:
@@ -425,6 +545,8 @@ class ViewTUI(App):
             self.notify("Realtime active")
             log_container = self.query_one("#log_container")
             log_container.scroll_end()
+        else:
+            self.notify("Realtime inactive", severity="warning")
 
     def action_quit(self):
         self.push_screen(PromptModal(), self.quit_callback)
@@ -437,11 +559,16 @@ class ViewTUI(App):
     def action_free_filter(self):
         self.push_screen(InputModal(self.fuzzy_filter), self.free_filter_callback)
         
+
+    def action_filter_list(self):
+        self.push_screen(FilterListModal(self.string_list_to_ignore), self.filter_list_modal_callback)
     def action_reset_filter(self):
         """reset all filters"""
         self.filter_levels = LOG_LEVEL_FILTER_CLEAR#[LogLevel.DEBUG, LogLevel.INFO, LogLevel.WARN, LogLevel.ERROR]
         self.active_filter_node_names = [name for name in self.nodes_names]
         self.fuzzy_filter = ""
+        self.string_list_to_ignore = []
+        self.notify("Filter reset / cleared", severity="warning")
         self.update_log()
 
     def action_debug(self):
