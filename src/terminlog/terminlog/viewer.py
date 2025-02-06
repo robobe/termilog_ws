@@ -21,8 +21,8 @@ class Viewer(Node):
         self.init_parameters()
         #TODO: qos or depth, 
         self.create_subscription(Log, TOPIC, self.handler, qos_profile=10)
-        nodes_name = self.get_parameter(NODES_TO_CAPTURE).get_parameter_value().string_array_value
-        self.app = ViewTUI(nodes_name, active_node_names_cb=self.active_nodes_filter)
+        self.nodes_name = self.get_parameter(NODES_TO_CAPTURE).get_parameter_value().string_array_value
+        self.app = ViewTUI(self.nodes_name, active_node_names_cb=self.active_nodes_filter)
 
     def active_nodes_filter(self):
         node_names = self.get_node_names()
@@ -34,6 +34,9 @@ class Viewer(Node):
         Args:
             msg (Log): rcl_interfaces.msg
         """
+        if msg.name not in self.nodes_name:
+            # filter un declared node
+            return
         ros_time = datetime.fromtimestamp(msg.stamp.sec + msg.stamp.nanosec / 1e9)
         self.app.update(ros_time,
                         msg.level,
