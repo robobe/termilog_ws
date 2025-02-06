@@ -184,9 +184,9 @@ class ViewTUI(App):
         Binding(key="i", action="info", description="Info"),
         Binding(key="w", action="warning", description="Warning"),
         Binding(key="e", action="error", description="Error"),
-        Binding(key="f", action="open_filter", description="Node"),
+        Binding(key="n", action="open_filter", description="Node"),
         Binding(key="c", action="reset_filter", description="Clear filters"),
-        Binding(key="z", action="free_filter", description="Free filter"),
+        Binding(key="f", action="free_filter", description="Free filter"),
         Binding(key="r", action="real_time", description="Realtime"),
     ]
 
