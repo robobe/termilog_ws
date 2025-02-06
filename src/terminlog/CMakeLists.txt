@@ -11,6 +11,7 @@ find_package(ament_cmake_python REQUIRED)
 
 set(NODES
   terminlog/viewer.py
+  terminlog/test_node.py
 )
 
 set(APP_FILES

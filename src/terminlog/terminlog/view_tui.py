@@ -20,6 +20,7 @@ from rapidfuzz import fuzz
 from terminlog import LogItem, LogLevel
 from terminlog.input_modal import InputModal, FreeTextFilterData
 from typing import NamedTuple, List
+from threading import RLock
 
 LOG_LEVEL_FILTER_CLEAR = 0
 FUZZY_LEVEL = 50
@@ -40,7 +41,7 @@ class ClickableStatic(Static):
         Static (_type_): _description_
     """
     def __init__(self, log_item:LogItem, callback, **kwargs):
-        text = f"{log_item.time} - {log_item.name}: {log_item.message}"
+        text = f"[{LogLevel(log_item.level).name}] {log_item.time} - {log_item.name}: {log_item.message}"
         super().__init__(text, **kwargs)
         self.log_item = log_item
         self.callback = callback
@@ -136,7 +137,8 @@ class FilterModal(ModalScreen):
         align: center middle;
     }
     FilterModal > Container > Vertical > Horizontal > Button {
-        margin: 2 4;
+        margin: 0 4;
+
     }
     """
     def __init__(self, filters, selected):
@@ -168,6 +170,9 @@ class FilterModal(ModalScreen):
     def on_key(self, event):
         if event.key == "escape":
             self.dismiss(FilterData(False, ""))
+
+        if event.key == "enter":
+            self.dismiss(FilterData(True, self.query_one(SelectionList).selected))
 # endregion node name filter modal window
 
 class ViewTUI(App):
@@ -179,8 +184,8 @@ class ViewTUI(App):
         Binding(key="i", action="info", description="Info"),
         Binding(key="w", action="warning", description="Warning"),
         Binding(key="e", action="error", description="Error"),
-        Binding(key="f", action="open_filter", description="By node name"),
-        Binding(key="c", action="reset_filter", description="Clear all filter"),
+        Binding(key="f", action="open_filter", description="Node"),
+        Binding(key="c", action="reset_filter", description="Clear filters"),
         Binding(key="z", action="free_filter", description="Free filter"),
         Binding(key="r", action="real_time", description="Realtime"),
     ]
@@ -190,6 +195,8 @@ class ViewTUI(App):
     
     def __init__(self, nodes_name, queue_size=100, active_node_names_cb = None):
         super().__init__()
+        self.lock = RLock()
+        self.queue_size = queue_size
         self.storage = deque(maxlen=queue_size)
         self.filter_levels = LOG_LEVEL_FILTER_CLEAR#[LogLevel.DEBUG, LogLevel.INFO, LogLevel.WARN, LogLevel.ERROR]
         self.nodes_names = nodes_name
@@ -199,6 +206,7 @@ class ViewTUI(App):
         self.updating = True
         self.realtime = True
         self.free_filter_type = "fuzzy"
+        self.row_counter = 0
         
     #region palette command region
     def get_system_commands(self, screen: Screen) -> Iterable[SystemCommand]:
@@ -212,8 +220,9 @@ class ViewTUI(App):
         """
         clear storage and rerender
         """
-        self.storage.clear()
-        self.update_log()
+        with self.lock:
+            self.storage.clear()
+            self.update_log()
         
     #region fuzzy filter
     
@@ -279,8 +288,12 @@ class ViewTUI(App):
             event (LogMessage): _description_
         """
         try:
+
             self.render_logs([event.message])
-            
+            #clear viewer and render logs if overflow and realtime
+            if self.realtime and self.row_counter > self.queue_size:
+                self.row_counter = 0
+                self.update_log()
         except NoMatches:
             pass
         
@@ -305,6 +318,7 @@ class ViewTUI(App):
         """
         log_container = self.query_one("#log_container")
         log_container.remove_children()
+        # log_container.scroll_home()
         self.render_logs(self.storage)
 
     def render_logs(self, logs) -> None:
@@ -352,9 +366,10 @@ class ViewTUI(App):
             
         
         #storage iteration
-        for log_item in logs:
-            if  level_ok() and node_name_ok() and input_filter_ok():
-                log_container.mount(self.build_log_message(log_item))
+        with self.lock:
+            for log_item in logs:
+                if  level_ok() and node_name_ok() and input_filter_ok():
+                    log_container.mount(self.build_log_message(log_item))
 
         if self.realtime:
             log_container.scroll_end()
@@ -375,8 +390,13 @@ class ViewTUI(App):
         level = LogLevel(level)
         log_time = time.strftime("%Y-%m-%d %H:%M:%S")
         log_item = LogItem(log_time, message, level, name, file, line)
-        self.storage.append(log_item)
         self.post_message(LogMessage(log_item))
+        with self.lock:
+            self.storage.append(log_item)
+            self.row_counter += 1
+
+           
+        
 
 
     #region filter by log level
