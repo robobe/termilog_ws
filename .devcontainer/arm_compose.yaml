@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  my_service:
+    image: humble/arm:dev
+    container_name: arm_build
+    volumes:
+      - ..:/workspace
+    hostname: arm
+    user: "user:user"
+    networks:
+      - my_network
+
+networks:
+  my_network:
+    driver: bridge
