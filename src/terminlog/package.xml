@@ -2,17 +2,17 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>terminlog</name>
-  <version>0.0.2</version>
+  <version>0.0.3</version>
   <description>Show ros logout topic using tui application</description>
-  <maintainer email="dev@gmail.com">user</maintainer>
+  <maintainer email="robo2020@gmail.com">user</maintainer>
   <license>Apache-2.0</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
-  <depend>python3-textual</depend>
-  <depend>python3-rapidfuzz-pip</depend>
+  <!-- <depend>python3-textual</depend> -->
+  <!-- <depend>python3-rapidfuzz-pip</depend> -->
 
   <export>
     <build_type>ament_cmake</build_type>

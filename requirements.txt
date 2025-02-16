@@ -1,2 +1,2 @@
-textual-dev
-rapidfuzz
+textual-dev==1.0.0
+rapidfuzz==3.12.1
