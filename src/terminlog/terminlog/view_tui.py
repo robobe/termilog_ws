@@ -21,6 +21,8 @@ from terminlog import LogItem, LogLevel
 from terminlog.input_modal import InputModal, FreeTextFilterData
 from typing import NamedTuple, List
 from threading import RLock
+from ament_index_python.packages import get_package_share_directory
+import os
 
 LOG_LEVEL_FILTER_CLEAR = 0
 FUZZY_LEVEL = 50
@@ -111,6 +113,50 @@ class PromptModal(ModalScreen[str]):
 
         self.dismiss(msg)
 
+class AboutModal(ModalScreen[str]):
+    DEFAULT_CSS = """
+    AboutModal {
+        align: center middle;
+    }
+
+    AboutModal > Container {
+        width: auto;
+        height: auto;
+        border: thick $background 80%;
+        background: $surface;
+    }
+
+    AboutModal > Container > Label {
+        text-align: center;
+        margin: 2 4;
+    }
+
+    AboutModal > Container > Button {
+        margin: 2 4;
+    }
+    """
+    def __init__(self, version):
+        super().__init__()
+        self.version = version
+
+    def compose(self) -> ComposeResult:
+        with Container():
+            yield Label("", id="version")
+            yield Button("Exit", variant="success", id="ok")
+            
+    def _on_mount(self, event):
+        obj = self.query_one("#version")
+        obj.update("Version: " + self.version)
+
+    def ok_msg(self):
+        return PromptData(True)
+    
+    
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "ok":
+            msg = self.ok_msg()
+       
+        self.dismiss(msg)
 
 # endregion
 
@@ -331,8 +377,28 @@ class ViewTUI(App):
     def get_system_commands(self, screen: Screen) -> Iterable[SystemCommand]:
         """Add command to palette"""
         yield SystemCommand("clear", "clear storage", self.clear_all)
+        yield SystemCommand("about", "about", self.about)
 
     # endregion palette command region
+
+    def about(self):
+        
+
+        def get_ros2_package_version(package_name):
+            try:
+                package_dir = get_package_share_directory(package_name)
+                package_xml = os.path.join(package_dir, 'package.xml')
+                with open(package_xml, 'r') as f:
+                    for line in f:
+                        if '<version>' in line:
+                            return line.strip().split('<version>')[1].split('</version>')[0]
+            except Exception as e:
+                print(f"Error: {e}")
+            return None
+        
+        version = get_ros2_package_version("terminlog")
+        self.push_screen(AboutModal(version))
+        
 
     def clear_all(self):
         """
