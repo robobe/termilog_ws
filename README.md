@@ -8,6 +8,13 @@ ROS2 node that show and filter `/rosout` topic by:
   - regex search
 
 
+## Packing
+```
+export ROSDISTRO_INDEX_URL=file://`pwd`/index-v4.yaml 
+export ROS_DISTRO=humble 
+rosdep update --rosdistro humble
+```
+
 ## install
 ### dependencies
 
@@ -88,6 +95,19 @@ Clear / reset all filters
 
 **clear**: clear storage, terminlog save X last log event can config by `log_queue_size` parameter, the action clear this storage
 
+--- 
+
+## Test installation
+
+```
+docker run -it --rm \
+--net host \
+--user user \
+--hostname test \
+-v `pwd`/deb:/tmp/debs \
+humble:dev \
+/bin/bash
+```
 
 ---
 
@@ -103,3 +123,5 @@ ExecuteProcess(
             shell=False 
         )
 ```
+
+

@@ -1,0 +1,12 @@
+%YAML 1.1
+# ROS index file
+---
+type: index
+version: 4
+distributions:
+  humble:
+    distribution: [rosdep/distribution.yaml]
+    # distribution_cache: file:///repo.ros2.org/rosdistro_cache/humble-cache.yaml.gz
+    distribution_status: active
+    distribution_type: ros2
+    python_version: 3

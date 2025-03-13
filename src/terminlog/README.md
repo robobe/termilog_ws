@@ -26,3 +26,15 @@ class MyNode(Node):
         self.get_logger().set_level(logging.DEBUG)  # Enable DEBUG logs
 ```
 
+
+
+```
+override_dh_install:
+	dh_install
+	mkdir -p debian/tmp/DEBIAN
+	cp $(CURDIR)/my_debian/postinst debian/postinst
+	chmod 755 debian/postinst
+
+override_dh_builddeb:
+	dh_builddeb --destdir=/home/user/workspaces/termilog_ws/deb
+```
