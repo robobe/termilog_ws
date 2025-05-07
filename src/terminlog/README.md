@@ -27,8 +27,12 @@ class MyNode(Node):
 ```
 
 
+## Patch rule file
+- deb output
+- post inst script
 
-```
+
+```make
 override_dh_install:
 	dh_install
 	mkdir -p debian/tmp/DEBIAN
@@ -37,4 +41,9 @@ override_dh_install:
 
 override_dh_builddeb:
 	dh_builddeb --destdir=/home/user/workspaces/termilog_ws/deb
+```
+
+### Docker to test deb installation
+```bash
+docker run -it --rm --net host --user user --hostname test -v `pwd`/deb:/tmp/debs humble:dev /bin/bash
 ```
