@@ -2,5 +2,7 @@ build/
 log/
 install/
 *.pyc
-**/.obj-x86_64-linux-gnu
+.obj-*-linux-gnu
 */terminlog/deb
+debian/
+*.deb
