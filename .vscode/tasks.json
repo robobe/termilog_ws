@@ -25,16 +25,19 @@
       {
         "label": "create debian package",
         "type": "shell",
-        "command": "cpack",
+        "command": "bloom-generate rosdebian && ./my_debian/patch_rule.sh && ./my_debian/patch_compat.sh && fakeroot debian/rules binary",
         "options": {
-          "cwd": "${workspaceFolder}/build/terminlog",
-          "shell": {
-            "executable": "source",
-            "args": ["/opt/ros/humble/setup.bash"]
-          }
-        },
-        "dependsOn": ["colcon"],
-        "problemMatcher": []
+          "cwd": "${workspaceFolder}/src/terminlog",
+        }
+      }
+      ,
+      {
+        "label": "clean",
+        "type": "shell",
+        "command": "./my_debian/clean.sh",
+        "options": {
+          "cwd": "${workspaceFolder}/src/terminlog",
+        }
       }
     ]
   }
