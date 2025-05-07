@@ -1,0 +1,7 @@
+textual:
+  pip:
+    packages: [textual]
+rapidfuzz:
+  pip:
+    packages: [rapidfuzz]
+
